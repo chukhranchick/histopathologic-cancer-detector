@@ -31,7 +31,13 @@ def main() -> None:
     models = [SimpleConv((64, 64)), CD2Conv((64, 64)), ConvNet((64, 64))]
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     criterion = nn.BCEWithLogitsLoss()
-    all_stats = {}
+    results_dir = 'result/64/stats_on_64px_with_dropout_100epochs.json'
+    if os.path.exists(results_dir):
+        all_stats = fetch_json(results_dir)
+    else:
+        if not os.path.exists('result'):
+            os.mkdir('result')
+        save_json({}, results_dir)
     for model in models:
 
         model = model.to(device)
@@ -49,9 +55,12 @@ def main() -> None:
         }
         model_name = model.__class__.__name__
         print(f"Training model: {model_name}")
-        train(model, dataloaders, criterion, optimizer, stats=_stats, device=device)
+        train(model, dataloaders, criterion, optimizer, epochs=100, stats=_stats, device=device)
+        print("loading previous training results...")
+        all_stats = fetch_json(results_dir)
         all_stats[model_name] = _stats
-    save_json(all_stats, 'result/stats_on_64px.json')
+        print("saving current training results...")
+        save_json(all_stats, results_dir)
 
 
 def show_stats(statisticks: dict):
@@ -82,5 +91,5 @@ def show_stats(statisticks: dict):
 
 if __name__ == '__main__':
     main()
-    stats = fetch_json('result/stats_on_64px.json')
+    stats = fetch_json('result/64/stats_on_64px_with_dropout_100epochs.json')
     show_stats(stats)

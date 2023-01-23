@@ -87,9 +87,15 @@ def train(
                         avg_train_loss > stats['train']['loss'][-1]):
                     early_stopping_counter += 1
                     if early_stopping_counter == patience:
-                        save_state(model, optimizer, save_dir)
                         print("Early Stopping...")
                         return
+                else:
+                    early_stopping_counter = 0
+
+        if stats['validation']['loss'] and stats['train']['loss']:
+            if (avg_valid_loss < stats['validation']['loss'][-1] or
+                    avg_train_loss < stats['train']['loss'][-1]):
+                save_state(model, optimizer, save_dir)
 
         stats['train']['loss'].append(avg_train_loss)
         stats['train']['accuracy'].append(avg_train_accuracy)
@@ -124,7 +130,7 @@ def load_state(model: nn.Module,
 
 def init_weight(m):
     if isinstance(m, nn.Conv2d):
-        nn.init.kaiming_normal(m.weight)
+        nn.init.kaiming_normal_(m.weight)
     if isinstance(m, nn.BatchNorm2d):
         nn.init.normal_(m.weight, 1.0, 0.02)
         nn.init.constant_(m.bias, 0)
@@ -150,13 +156,16 @@ class SimpleConv(nn.Module):
         h, w = eval_shape(*input_shape, nn.Sequential(self.conv))
         self.fc1 = nn.Linear(32 * h * w, 512)
         self.fc2 = nn.Linear(512, 1)
+        self.dropout = nn.Dropout(0.3)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.conv(x)
         x = self.relu(x)
+        x = self.dropout(x)
         x = torch.flatten(x, 1)
         x = self.fc1(x)
         x = self.relu(x)
+        x = self.dropout(x)
         x = self.fc2(x)
         return x
 
@@ -168,9 +177,12 @@ class CD2Conv(nn.Module):
 
     def __init__(self, input_shape=(32, 32)):
         super(CD2Conv, self).__init__()
+        self.dropout = nn.Dropout(0.3)
         self.conv_block = nn.Sequential(
             ConvWithReLU(3, self.FIRST_LAYER, 7),
-            ConvWithReLU(self.FIRST_LAYER, self.SECOND_LAYER, 5)
+            self.dropout,
+            ConvWithReLU(self.FIRST_LAYER, self.SECOND_LAYER, 5),
+            self.dropout
         )
         self.relu = nn.ReLU()
         h, w = eval_shape(*input_shape, self.conv_block)
@@ -182,6 +194,7 @@ class CD2Conv(nn.Module):
         x = torch.flatten(x, 1)
         x = self.fc1(x)
         x = self.relu(x)
+        x = self.dropout(x)
         x = self.fc2(x)
         return x
 
@@ -207,10 +220,14 @@ class ConvBlock(nn.Module):
 class ConvNet(nn.Module):
     def __init__(self, input_shape=(32, 32)):
         super(ConvNet, self).__init__()
+        self.dropout = nn.Dropout(0.3)
         self.block = nn.Sequential(
             ConvBlock(3, 32, 7),
+            self.dropout,
             ConvBlock(32, 64, 5),
-            ConvBlock(64, 64)
+            self.dropout,
+            ConvBlock(64, 64),
+            self.dropout
         )
         self.relu = nn.ReLU()
         h, w = eval_shape(*input_shape, self.block)
@@ -222,5 +239,6 @@ class ConvNet(nn.Module):
         x = torch.flatten(x, 1)
         x = self.fc1(x)
         x = self.relu(x)
+        x = self.dropout(x)
         x = self.fc2(x)
         return x

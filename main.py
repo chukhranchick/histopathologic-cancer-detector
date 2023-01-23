@@ -32,9 +32,7 @@ def main() -> None:
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     criterion = nn.BCEWithLogitsLoss()
     results_dir = 'result/64/stats_on_64px_with_dropout_100epochs.json'
-    if os.path.exists(results_dir):
-        all_stats = fetch_json(results_dir)
-    else:
+    if not os.path.exists(results_dir):
         if not os.path.exists('result'):
             os.mkdir('result')
         save_json({}, results_dir)
@@ -63,24 +61,24 @@ def main() -> None:
         save_json(all_stats, results_dir)
 
 
-def show_stats(statisticks: dict):
-    for model in statisticks.keys():
+def show_stats(statistics: dict):
+    for model in statistics.keys():
         fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2)
-        ax1.plot(statisticks[model]['train']['loss'], label='train')
-        ax1.plot(statisticks[model]['validation']['loss'], label='validation')
-        ax2.plot(statisticks[model]['train']['accuracy'], label='train')
-        ax2.plot(statisticks[model]['validation']['accuracy'], label='validation')
+        ax1.plot(statistics[model]['train']['loss'], label='train')
+        ax1.plot(statistics[model]['validation']['loss'], label='validation')
+        ax2.plot(statistics[model]['train']['accuracy'], label='train')
+        ax2.plot(statistics[model]['validation']['accuracy'], label='validation')
         ax1.set_title('Loss')
         ax2.set_title('Accuracy')
         plt.title(model)
         plt.legend()
         plt.show()
     fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(nrows=2, ncols=2, figsize=(10, 10))
-    for model in statisticks.keys():
-        ax1.plot(statisticks[model]['train']['loss'], label=model)
-        ax2.plot(statisticks[model]['train']['accuracy'], label=model)
-        ax3.plot(statisticks[model]['validation']['loss'], label=model)
-        ax4.plot(statisticks[model]['validation']['accuracy'], label=model)
+    for model in statistics.keys():
+        ax1.plot(statistics[model]['train']['loss'], label=model)
+        ax2.plot(statistics[model]['train']['accuracy'], label=model)
+        ax3.plot(statistics[model]['validation']['loss'], label=model)
+        ax4.plot(statistics[model]['validation']['accuracy'], label=model)
     ax1.set_title('Train Loss')
     ax2.set_title('Train accuracy')
     ax3.set_title('Validation Loss')

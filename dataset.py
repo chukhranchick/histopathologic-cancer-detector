@@ -14,10 +14,12 @@ from tqdm import tqdm
 class HistopathologicCancerDS(Dataset):
     def __init__(self,
                  dataframe: pd.DataFrame,
+                 images_path: str = 'images64.pt',
+                 labels_path: str = 'labels.pt',
                  transform=None):
         self.transform = transform
-        processed_labels_path: str = os.path.join('data', 'labels.pt')
-        processed_images_path = os.path.join('data', 'images64.pt')
+        processed_labels_path: str = os.path.join('data', labels_path)
+        processed_images_path = os.path.join('data', images_path)
         if os.path.exists(processed_labels_path) and os.path.exists(processed_images_path):
             self.images = torch.load(processed_images_path)
             self.labels = torch.load(processed_labels_path)
@@ -50,9 +52,12 @@ class HistopathologicCancerDS(Dataset):
 
 
 class ProcessedHistopathologicCancerDS(Dataset):
-    def __init__(self, data_path: str):
-        self.images = torch.load(os.path.join(data_path, 'images64.pt'))
-        self.labels = torch.load(os.path.join(data_path, 'labels.pt'))
+    def __init__(self,
+                 data_path: str,
+                 images_path: str = 'images64.pt',
+                 labels_path: str = 'labels.pt'):
+        self.images = torch.load(os.path.join(data_path, images_path))
+        self.labels = torch.load(os.path.join(data_path, labels_path))
 
     def __len__(self):
         return len(self.labels)

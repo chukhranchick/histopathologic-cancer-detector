@@ -21,8 +21,8 @@ class HistopathologicDataset(Dataset):
     def __len__(self):
         len(self.df)
 
-    def __getitem__(self, item):
-        image, label = self.df[item]
+    def __getitem__(self, index: int):
+        image, label = self.df.iloc[index]
         with Image.open(image) as img:
             image = self.transform(img)
         return image, label

@@ -19,7 +19,7 @@ def prepare_data(labels_dir: str, set_type: str = 'train') -> None:
     intersected = np.intersect1d(dataframe['id'].to_numpy().tolist(), image_names)
 
     dataframe = dataframe[dataframe['id'].isin(intersected)]
-    dataframe['id'] = dataframe['id'].apply(lambda x: os.path.join(set_type, x))
+    dataframe['id'] = dataframe['id']
     dataframe.set_index('id').to_csv("processed_labels.csv")
 
 

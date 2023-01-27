@@ -8,8 +8,26 @@ from torch import nn
 from torch.cuda.amp import autocast
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
+import numpy as np
 
-from utils import eval_shape
+
+def eval_shape(height, width, model, pool=0):
+    for layer in model.modules():
+        if isinstance(layer, nn.Conv2d) or isinstance(layer, nn.MaxPool2d):
+            kernel_size = layer.kernel_size
+            stride = layer.stride
+            padding = layer.padding
+            dilation = layer.dilation
+            if isinstance(layer, nn.Conv2d):
+                height = np.floor((height + 2 * padding[0] - dilation[0] * (kernel_size[0] - 1) - 1) / stride[0] + 1)
+                width = np.floor((width + 2 * padding[1] - dilation[1] * (kernel_size[1] - 1) - 1) / stride[1] + 1)
+            elif isinstance(layer, nn.MaxPool2d):
+                height = np.floor((height + 2 * padding - dilation * (kernel_size - 1) - 1) / stride + 1)
+                width = np.floor((width + 2 * padding - dilation * (kernel_size - 1) - 1) / stride + 1)
+    if pool:
+        height /= pool
+        width /= pool
+    return int(height), int(width)
 
 
 def one_epoch(
@@ -220,15 +238,14 @@ class ConvBlock(nn.Module):
 class ConvNet(nn.Module):
     def __init__(self, input_shape=(32, 32)):
         super(ConvNet, self).__init__()
-        self.dropout = nn.Dropout(0.3)
         self.block = nn.Sequential(
             ConvBlock(3, 32, 7),
-            self.dropout,
+            ConvBlock(32, 32, 7),
             ConvBlock(32, 64, 5),
-            self.dropout,
             ConvBlock(64, 64),
-            self.dropout
+            ConvBlock(64, 64),
         )
+        self.dropout = nn.Dropout(0.3)
         self.relu = nn.ReLU()
         h, w = eval_shape(*input_shape, self.block)
         self.fc1 = nn.Linear(64 * h * w, 512)
@@ -236,6 +253,7 @@ class ConvNet(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.block(x)
+        x = self.dropout(x)
         x = torch.flatten(x, 1)
         x = self.fc1(x)
         x = self.relu(x)

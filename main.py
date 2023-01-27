@@ -6,8 +6,9 @@ import torch
 from torch import nn
 from torch.optim import Adam
 from torch.utils.data import DataLoader, random_split
+from torchvision.transforms import transforms
 
-from dataset import ProcessedHistopathologicCancerDS
+from dataset import HistopathologicDataset
 from models import ConvNet, train, SimpleConv, CD2Conv, init_weight
 from utils import fetch_json, save_json
 
@@ -16,25 +17,37 @@ def main() -> None:
     TRAIN_BATCH_SIZE = 64
     VALIDATION_BATCH_SIZE = 512
 
-    ds = ProcessedHistopathologicCancerDS('data')
+    # Set only if you don't have memory enough to work with the batch
+    torch.cuda.set_per_process_memory_fraction(0.5, 0)
+
+    transform = transforms.Compose([
+        transforms.CenterCrop(64),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+    ds = HistopathologicDataset('train', 'processed_labels.csv', transform)
     train_size = int(0.9 * len(ds))
     validation_size = len(ds) - train_size
     train_ds, validation_ds = random_split(ds, [train_size, validation_size])
 
-    train_dl = DataLoader(train_ds, batch_size=TRAIN_BATCH_SIZE, shuffle=True)
-    validation_dl = DataLoader(validation_ds, batch_size=VALIDATION_BATCH_SIZE, shuffle=True)
+    train_dl = DataLoader(train_ds,
+                          batch_size=TRAIN_BATCH_SIZE,
+                          shuffle=True)
+    validation_dl = DataLoader(validation_ds,
+                               batch_size=VALIDATION_BATCH_SIZE,
+                               shuffle=True)
     dataloaders = {
         'train': train_dl,
         'validation': validation_dl
     }
 
-    models = [SimpleConv((64, 64)), CD2Conv((64, 64)), ConvNet((64, 64))]
+    models = [ConvNet((64, 64))]
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     criterion = nn.BCEWithLogitsLoss()
-    results_dir = 'result/64/stats_on_64px_with_dropout_100epochs.json'
+    results_dir = 'result/64/stats_on_2_dropout_100_epochs.json'
     if not os.path.exists(results_dir):
-        if not os.path.exists('result'):
-            os.mkdir('result')
+        if not os.path.exists('result/64'):
+            os.mkdir('result/64')
         save_json({}, results_dir)
     for model in models:
 
@@ -89,5 +102,5 @@ def show_stats(statistics: dict):
 
 if __name__ == '__main__':
     main()
-    stats = fetch_json('result/64/stats_on_64px_with_dropout_100epochs.json')
+    stats = fetch_json('result/64/stats_on_2_dropout_100_epochs.json')
     show_stats(stats)

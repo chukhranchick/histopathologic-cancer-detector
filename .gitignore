@@ -1,9 +1,11 @@
+*.csv
+
 /test
 /train
 
+__pycache__/
+.pytest_cache/
 .idea/
-
-/plots
 /.ipynb_checkpoints
-*.csv
+
 /result

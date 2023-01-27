@@ -5,5 +5,5 @@
 
 /plots
 /.ipynb_checkpoints
-submission.csv
+*.csv
 /result

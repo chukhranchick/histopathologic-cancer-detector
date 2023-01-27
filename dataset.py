@@ -1,15 +1,9 @@
 import os
 
 import pandas as pd
-import numpy as np
-
 from PIL import Image
-
-import torch
-from torch import nn
-from torchvision.transforms import transforms
 from torch.utils.data import Dataset
-from tqdm import tqdm
+from torchvision.transforms import transforms
 
 
 class HistopathologicDataset(Dataset):

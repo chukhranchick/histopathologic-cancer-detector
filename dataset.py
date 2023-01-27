@@ -7,60 +7,30 @@ from PIL import Image
 
 import torch
 from torch import nn
+from torchvision.transforms import transforms
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
 
-class HistopathologicCancerDS(Dataset):
-    def __init__(self,
-                 dataframe: pd.DataFrame,
-                 images_path: str = 'images64.pt',
-                 labels_path: str = 'labels.pt',
-                 transform=None):
-        self.transform = transform
-        processed_labels_path: str = os.path.join('data', labels_path)
-        processed_images_path = os.path.join('data', images_path)
-        if os.path.exists(processed_labels_path) and os.path.exists(processed_images_path):
-            self.images = torch.load(processed_images_path)
-            self.labels = torch.load(processed_labels_path)
-        else:
-            self.labels = dataframe['label'].to_numpy()
-            self.labels = torch.tensor(self.labels)
-            self.abs_image_path = dataframe['id'].to_numpy()
-            print("Converting images to tensors...")
-            self.images = self._images_to_tensors()
-            print("Trying to save tensors to files...")
-            if not os.path.exists('data'):
-                os.mkdir('data')
-            torch.save(self.images, processed_images_path)
-            torch.save(self.labels, processed_labels_path)
-        print("Done")
-        print("The dataset is ready for use.")
+class HistopathologicDataset(Dataset):
+    def __init__(self, data_dir: str, labels: str, transformation: transforms):
+        self.df = pd.read_csv(labels)
+        self.df['id'] = self.df['id'].apply(lambda x: os.path.join(data_dir, x))
+        self._transform = transformation
 
     def __len__(self):
-        return len(self.labels)
+        len(self.df)
 
-    def _images_to_tensors(self):
-        images = []
-        for i in tqdm(range(len(self.abs_image_path))):
-            with Image.open(self.abs_image_path[i]) as image:
-                images.append(self.transform(image))
-        return torch.stack(images)
+    def __getitem__(self, item):
+        image, label = self.df[item]
+        with Image.open(image) as img:
+            image = self.transform(img)
+        return image, label
 
-    def __getitem__(self, index):
-        return self.images[index], self.labels[index]
+    @property
+    def transform(self):
+        return self._transform
 
-
-class ProcessedHistopathologicCancerDS(Dataset):
-    def __init__(self,
-                 data_path: str,
-                 images_path: str = 'images64.pt',
-                 labels_path: str = 'labels.pt'):
-        self.images = torch.load(os.path.join(data_path, images_path))
-        self.labels = torch.load(os.path.join(data_path, labels_path))
-
-    def __len__(self):
-        return len(self.labels)
-
-    def __getitem__(self, index):
-        return self.images[index], self.labels[index]
+    @transform.setter
+    def transform(self, value):
+        self._transform = value

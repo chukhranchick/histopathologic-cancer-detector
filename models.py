@@ -1,7 +1,7 @@
 import datetime
 import gc
 import os
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 from torch import nn
@@ -123,7 +123,6 @@ def train(
 
         print(f"\nTraining average loss - {avg_train_loss}, average accuracy - {avg_train_accuracy}")
         print(f"Validation loss - {avg_valid_loss},  accuracy - {avg_valid_accuracy}")
-    save_state(model, optimizer, save_dir)
 
 
 def save_state(model: nn.Module,
@@ -166,18 +165,23 @@ class ConvWithReLU(nn.Module):
         return self.block(x)
 
 
-class SimpleConv(nn.Module):
-    def __init__(self, input_shape=(32, 32)):
-        super(SimpleConv, self).__init__()
-        self.conv = ConvBlock(3, 32, 7)
+class Conv1Net(nn.Module):
+    def __init__(self, params: dict[str, Union[int, tuple[int, int]]]):
+        super(Conv1Net, self).__init__()
+        input_channels: int = params['in_channels']
+        out_channels: int = params['out_channels']
+        image_size: tuple = params['image_size']
+        self.conv = ConvBlock(input_channels, out_channels, 7)
+        self.max_pool = nn.MaxPool2d(3)
+        h, w = eval_shape(*image_size, nn.Sequential(self.conv, self.max_pool))
+        self.fc1 = nn.Linear(out_channels * h * w, 128)
+        self.fc2 = nn.Linear(128, 1)
         self.relu = nn.ReLU()
-        h, w = eval_shape(*input_shape, nn.Sequential(self.conv))
-        self.fc1 = nn.Linear(32 * h * w, 512)
-        self.fc2 = nn.Linear(512, 1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.conv(x)
         x = self.relu(x)
+        x = self.max_pool(x)
         x = torch.flatten(x, 1)
         x = self.fc1(x)
         x = self.relu(x)
@@ -185,21 +189,23 @@ class SimpleConv(nn.Module):
         return x
 
 
-class CD2Conv(nn.Module):
-    FIRST_LAYER: int = 32
-    SECOND_LAYER: int = 64
-    FC_LAYER: int = 512
+class Conv2Net(nn.Module):
+    def __init__(self, params: dict[str, Union[int, tuple[int, int]]]):
+        super(Conv2Net, self).__init__()
+        input_channels: int = params['in_channels']
+        out_channels: int = params['out_channels']
+        image_size: tuple = params['image_size']
 
-    def __init__(self, input_shape=(32, 32)):
-        super(CD2Conv, self).__init__()
         self.conv_block = nn.Sequential(
-            ConvWithReLU(3, self.FIRST_LAYER, 7),
-            ConvWithReLU(self.FIRST_LAYER, self.SECOND_LAYER, 5)
+            ConvWithReLU(input_channels, out_channels, 7),
+            ConvWithReLU(out_channels, out_channels * 2, 5),
+            nn.MaxPool2d(3)
         )
+        h, w = eval_shape(*image_size, self.conv_block)
+
         self.relu = nn.ReLU()
-        h, w = eval_shape(*input_shape, self.conv_block)
-        self.fc1 = nn.Linear(self.SECOND_LAYER * h * w, self.FC_LAYER)
-        self.fc2 = nn.Linear(self.FC_LAYER, 1)
+        self.fc1 = nn.Linear(out_channels * 2 * h * w, 128)
+        self.fc2 = nn.Linear(128, 1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.conv_block(x)
@@ -228,20 +234,25 @@ class ConvBlock(nn.Module):
         return self.block(x)
 
 
-class ConvNet(nn.Module):
-    def __init__(self, input_shape=(32, 32)):
-        super(ConvNet, self).__init__()
+class Conv4Net(nn.Module):
+    def __init__(self, params: dict[str, Union[int, tuple[int, int]]]):
+        super(Conv4Net, self).__init__()
+        input_channels: int = params['in_channels']
+        out_channels: int = params['out_channels']
+        image_size: tuple = params['image_size']
+
         self.block = nn.Sequential(
-            ConvBlock(3, 32, 7),
-            ConvBlock(32, 32, 7),
-            ConvBlock(32, 64, 5),
-            ConvBlock(64, 64),
-            ConvBlock(64, 64),
+            ConvBlock(input_channels, out_channels, 7),
+            ConvBlock(out_channels, out_channels * 2, 7),
+            nn.MaxPool2d(3),
+            ConvBlock(out_channels * 2, out_channels * 4, 5),
+            ConvBlock(out_channels * 4, out_channels * 8),
+            nn.MaxPool2d(3)
         )
         self.relu = nn.ReLU()
-        h, w = eval_shape(*input_shape, self.block)
-        self.fc1 = nn.Linear(64 * h * w, 512)
-        self.fc2 = nn.Linear(512, 1)
+        h, w = eval_shape(*image_size, self.block)
+        self.fc1 = nn.Linear(out_channels * 8 * h * w, 128)
+        self.fc2 = nn.Linear(128, 1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.block(x)

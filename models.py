@@ -153,15 +153,21 @@ def init_weight(m):
         nn.init.constant_(m.bias, 0)
 
 
-class ConvWithReLU(nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, kernel_size: int = 3, stride: int = 1):
-        super(ConvWithReLU, self).__init__()
+class ConvBlock(nn.Module):
+    def __init__(
+            self,
+            in_channels: int,
+            out_channels: int,
+            kernel_size: int = 3,
+            stride: int = 1):
+        super(ConvBlock, self).__init__()
         self.block = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size, stride),
+            nn.BatchNorm2d(out_channels),
             nn.ReLU()
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.block(x)
 
 
@@ -197,8 +203,8 @@ class Conv2Net(nn.Module):
         image_size: tuple = params['image_size']
 
         self.conv_block = nn.Sequential(
-            ConvWithReLU(input_channels, out_channels, 7),
-            ConvWithReLU(out_channels, out_channels * 2, 5),
+            ConvBlock(input_channels, out_channels, 7),
+            ConvBlock(out_channels, out_channels * 2, 5),
             nn.MaxPool2d(3)
         )
         h, w = eval_shape(*image_size, self.conv_block)
@@ -214,24 +220,6 @@ class Conv2Net(nn.Module):
         x = self.relu(x)
         x = self.fc2(x)
         return x
-
-
-class ConvBlock(nn.Module):
-    def __init__(
-            self,
-            in_channels: int,
-            out_channels: int,
-            kernel_size: int = 3,
-            stride: int = 1):
-        super(ConvBlock, self).__init__()
-        self.block = nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, kernel_size, stride),
-            nn.BatchNorm2d(out_channels),
-            nn.ReLU()
-        )
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.block(x)
 
 
 class Conv4Net(nn.Module):

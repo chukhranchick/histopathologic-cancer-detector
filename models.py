@@ -24,6 +24,7 @@ def eval_shape(height, width, model, pool=0):
             elif isinstance(layer, nn.MaxPool2d):
                 height = np.floor((height + 2 * padding - dilation * (kernel_size - 1) - 1) / stride + 1)
                 width = np.floor((width + 2 * padding - dilation * (kernel_size - 1) - 1) / stride + 1)
+        print(height, width)
     if pool:
         height /= pool
         width /= pool
@@ -101,8 +102,8 @@ def train(
 
         if early_stopping:
             if stats['validation']['loss'] and stats['train']['loss']:
-                if (avg_valid_loss > stats['validation']['loss'][-1] or
-                        avg_train_loss > stats['train']['loss'][-1]):
+                if (avg_valid_loss > stats['validation']['loss'][-(1 + early_stopping_counter)] or
+                        avg_train_loss > stats['train']['loss'][-(1 + early_stopping_counter)]):
                     early_stopping_counter += 1
                     if early_stopping_counter == patience:
                         print("Early Stopping...")
@@ -111,8 +112,8 @@ def train(
                     early_stopping_counter = 0
 
         if stats['validation']['loss'] and stats['train']['loss']:
-            if (avg_valid_loss < stats['validation']['loss'][-1] or
-                    avg_train_loss < stats['train']['loss'][-1]):
+            if (avg_valid_loss < stats['validation']['loss'][-(1 + early_stopping_counter)] or
+                    avg_train_loss < stats['train']['loss'][-(1 + early_stopping_counter)]):
                 save_state(model, optimizer, save_dir)
 
         stats['train']['loss'].append(avg_train_loss)
@@ -204,6 +205,7 @@ class Conv2Net(nn.Module):
 
         self.conv_block = nn.Sequential(
             ConvBlock(input_channels, out_channels, 7),
+            nn.MaxPool2d(3),
             ConvBlock(out_channels, out_channels * 2, 5),
             nn.MaxPool2d(3)
         )
@@ -231,11 +233,13 @@ class Conv4Net(nn.Module):
 
         self.block = nn.Sequential(
             ConvBlock(input_channels, out_channels, 7),
-            ConvBlock(out_channels, out_channels * 2, 7),
+            nn.MaxPool2d(3),
+            ConvBlock(out_channels, out_channels * 2, 5),
             nn.MaxPool2d(3),
             ConvBlock(out_channels * 2, out_channels * 4, 5),
+            nn.MaxPool2d(2),
             ConvBlock(out_channels * 4, out_channels * 8),
-            nn.MaxPool2d(3)
+            nn.MaxPool2d(2)
         )
         self.relu = nn.ReLU()
         h, w = eval_shape(*image_size, self.block)

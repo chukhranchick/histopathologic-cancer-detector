@@ -1,13 +1,11 @@
 *.csv
-
-/test
-/train
+*.json
 
 __pycache__/
 .pytest_cache/
 .idea/
 /.ipynb_checkpoints
 
-/result
+results/
 data/
 weights/

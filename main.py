@@ -9,7 +9,8 @@ from torch.utils.data import DataLoader, random_split
 from torchvision.transforms import transforms
 
 from dataset import HistopathologicDataset
-from models import Conv4Net, train, Conv1Net, Conv2Net, init_weight
+from utils.train import train
+from models import Conv4Net, init_weight
 from utils import fetch_json, save_json
 
 
@@ -25,7 +26,7 @@ def main() -> None:
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
-    ds = HistopathologicDataset('train', 'processed_labels.csv', transform)
+    ds = HistopathologicDataset('../train', 'processed_labels.csv', transform)
     print(f'Dataset length: {len(ds)}')
     train_size = int(0.9 * len(ds))
     validation_size = len(ds) - train_size
@@ -48,16 +49,15 @@ def main() -> None:
         'image_size': (64, 64)
     }
 
-    models = [Conv1Net(model_params), Conv2Net(model_params), Conv4Net(model_params)]
+    models = [Conv4Net(model_params)]
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     criterion = nn.BCEWithLogitsLoss()
-    results_dir = 'result/64/weight init 8 filters max pooling 128 fc.json'
+    results_dir = 'result/64/MsnLZcp3AD7gjPm8.json'
     if not os.path.exists(results_dir):
-        if not os.path.exists('result/64'):
-            os.mkdir('result/64')
+        if not os.path.exists('../result/64'):
+            os.mkdir('../result/64')
         save_json({}, results_dir)
     for model in models:
-
         model = model.to(device)
         model.apply(init_weight)
         optimizer = Adam(model.parameters(), lr=1e-4)
@@ -108,6 +108,6 @@ def show_stats(statistics: dict):
 
 
 if __name__ == '__main__':
-    # main()
-    stats = fetch_json('result/64/weight init 8 filters max pooling 128 fc.json')
+    main()
+    stats = fetch_json('result/64/MsnLZcp3AD7gjPm8.json')
     show_stats(stats)

@@ -39,5 +39,6 @@ class HistopathologicDataset(Dataset):
         for i in tqdm(range(len(self.df))):
             image, label = self.df.iloc[i]
             with Image.open(image) as img:
-                tensors.append(self.transform(img))
+                tensors.append(self.transform(img).detach())
+        print("trying to stack tensor list in pytorch tensor...")
         return torch.stack(tensors)

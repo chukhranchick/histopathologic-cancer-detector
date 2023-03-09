@@ -31,7 +31,9 @@ def main(file_config: dict, model_config: dict, result_file: str) -> None:
     ds = HistopathologicDataset(file_config['train_data'], file_config['processed_labels'], transform)
     print(f'Dataset length: {len(ds)}')
 
-    train_size = int(0.9 * len(ds))
+    SPLIT_RATIO = 0.9
+
+    train_size = int(SPLIT_RATIO * len(ds))
     validation_size = len(ds) - train_size
     train_ds, validation_ds = random_split(ds, [train_size, validation_size])
 
@@ -42,10 +44,6 @@ def main(file_config: dict, model_config: dict, result_file: str) -> None:
         'validation': validation_dl
     }
 
-    models = [Conv4Net(model_config)]
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    criterion = nn.BCEWithLogitsLoss()
-
     result_dir = file_config['results_dir']
     if not os.path.exists(result_dir):
         os.mkdir(result_dir)
@@ -53,10 +51,18 @@ def main(file_config: dict, model_config: dict, result_file: str) -> None:
     if not os.path.exists(full_result_path):
         save_json({}, full_result_path)
 
+    models = [Conv4Net(model_config)]
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    criterion = nn.BCEWithLogitsLoss()
+
+    lr = 2e-4
+    epochs = 100
+    weight_decay = 1e-6
+
     for model in models:
         model = model.to(device)
         model.apply(init_weight)
-        optimizer = Adam(model.parameters(), lr=5e-4)
+        optimizer = Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
         _stats = {
             'train': {
                 'loss': [],
@@ -69,10 +75,16 @@ def main(file_config: dict, model_config: dict, result_file: str) -> None:
         }
         model_name = model.__class__.__name__
         print(f"Training model: {model_name}")
-        train(model, dataloaders, criterion, optimizer, epochs=100, stats=_stats, device=device, patience=10)
+        train(model, dataloaders, criterion, optimizer, epochs=epochs, stats=_stats, device=device, patience=10)
         print("loading previous training results...")
         all_stats = fetch_json(full_result_path)
         all_stats[model_name] = _stats
+        all_stats[model_name]['structure'] = str(model)
+        all_stats[model_name]['lr'] = lr
+        all_stats[model_name]['weight_decay'] = weight_decay
+        all_stats[model_name]['epochs'] = epochs
+        all_stats[model_name]['split_ratio'] = SPLIT_RATIO
+
         print("saving current training results...")
         save_json(all_stats, full_result_path)
 
@@ -104,14 +116,14 @@ def show_stats(statistics: dict):
 
 
 if __name__ == '__main__':
-    # letters = 'abcdefghijklmnopqrstuvwxyz'
-    # upper_letters = letters.upper()
-    # digits = '0123456789'
-    # all_chars = letters + upper_letters + digits
+    letters = 'abcdefghijklmnopqrstuvwxyz'
+    upper_letters = letters.upper()
+    digits = '0123456789'
+    all_chars = letters + upper_letters + digits
     file_config = fetch_json(SETTINGS_FILE)['file_config']
-    # model_config = fetch_json(SETTINGS_FILE)['model_config']
-    # result_file = f"result_{''.join(np.random.choice(list(all_chars), 10))}.json"
-    full_result_path = os.path.join(file_config['results_dir'], "result_JyOvRDpPBq.json")
-    # main(file_config, model_config, result_file)
+    model_config = fetch_json(SETTINGS_FILE)['model_config']
+    result_file = f"result_{''.join(np.random.choice(list(all_chars), 10))}.json"
+    full_result_path = os.path.join(file_config['results_dir'], result_file)
+    main(file_config, model_config, result_file)
     stats = fetch_json(full_result_path)
     show_stats(stats)

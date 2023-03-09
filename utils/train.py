@@ -64,10 +64,12 @@ def train(
         stats: dict = None,
         device: str = 'cpu',
         early_stopping: bool = True,
-        patience: int = 5) -> None:
-    current_date = datetime.datetime.now().strftime('%d.%m.%y')
+        patience: int = 5,
+        use_advanced_l2_loss: bool = False) -> None:
+    current_date = datetime.datetime.now().strftime("%d.%m.%yyyy")
+    current_time = datetime.datetime.now().strftime("%H-%M-%S")
     model_name = model.__class__.__name__
-    save_dir = os.path.join('weights', current_date, model_name)
+    save_dir = os.path.join('weights', current_date, current_time)
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
     save_dir = os.path.join(save_dir, f'{model_name}.pt')
@@ -80,7 +82,7 @@ def train(
             avg_valid_loss, avg_valid_accuracy = one_epoch(model, dataloaders['validation'], criterion, device=device)
 
         if early_stopping:
-            if stats['validation']['loss'] and stats['train']['loss']:
+            if epoch > 0:
                 if (avg_valid_loss > stats['validation']['loss'][-(1 + early_stopping_counter)] or
                         avg_train_loss > stats['train']['loss'][-(1 + early_stopping_counter)]):
                     early_stopping_counter += 1

@@ -117,11 +117,11 @@ class Conv4Net(nn.Module):
             ConvBlock(out_channels * 2, out_channels * 4),
             nn.MaxPool2d(2),
             ConvBlock(out_channels * 4, out_channels * 8),
-            nn.MaxPool2d(2)
+            nn.MaxPool2d(2),
+            nn.Dropout(0.3)
         )
         self.relu = nn.ReLU()
         h, w = eval_shape(*image_size, self.block)
-        print(f'image size after conv block - {h, w}')
         self.fc1 = nn.Linear(out_channels * 8 * h * w, 128)
         self.fc2 = nn.Linear(128, 1)
         self.dropout = nn.Dropout(0.3)

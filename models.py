@@ -33,12 +33,11 @@ def init_weight(m):
 
 
 class ConvBlock(nn.Module):
-    def __init__(
-            self,
-            in_channels: int,
-            out_channels: int,
-            kernel_size: int = 3,
-            stride: int = 1):
+    def __init__(self,
+                 in_channels: int,
+                 out_channels: int,
+                 kernel_size: int = 3,
+                 stride: int = 1):
         super(ConvBlock, self).__init__()
         self.block = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size, stride),
@@ -122,8 +121,8 @@ class Conv4Net(nn.Module):
         )
         self.relu = nn.ReLU()
         h, w = eval_shape(*image_size, self.block)
-        self.fc1 = nn.Linear(out_channels * 8 * h * w, 128)
-        self.fc2 = nn.Linear(128, 1)
+        self.fc1 = nn.Linear(out_channels * 8 * h * w, 64)
+        self.fc2 = nn.Linear(64, 1)
         self.dropout = nn.Dropout(0.3)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
